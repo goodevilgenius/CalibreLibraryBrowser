@@ -84,13 +84,13 @@ class LibraryBrowser {
 		cnx.close();
 	}
 
-	public function do_404(args:Array<Dynamic>) {
+	public function do_404(args:Array<String>) {
 		neko.Web.setReturnCode(404);
 		Sys.println("Not found");
 		return true;
 	}
 
-	public function test(args:Array<Dynamic>) {
+	public function test(args:Array<String>) {
 		for (c in args) trace(c);
 		/* // search for authors
 		var search = Author.manager.search($name.like("B%"),{orderBy: name, limit:20});
@@ -98,52 +98,51 @@ class LibraryBrowser {
 		//*/
 	}
 
-	public function author(args:Array<Dynamic>) {
-		if (args.length < 1) { do_404([]); return null; }
-
-		var template_source = haxe.Resource.getString("author_" + ext);
-		if (template_source == null) { do_404([]); return null; }
+	private function runStuff(method:String, options:Dynamic):Bool {
+		var template_source = haxe.Resource.getString(method + "_" + ext);
+		if (template_source == null) { do_404([]); return false; }
 		var template = new haxe.Template(template_source);
+
+		var out = template.execute(options, {textesc: textesc, urlesc: urlesc, getmime: getmime});
+
+		if (ext == "xml") neko.Web.setHeader("Content-type","application/xml");
+		Sys.print(out);
+		return true;
+	}
+
+	public function author(args:Array<String>):Bool {
+		if (args.length < 1) args.push("1");
 
 		var id = Std.parseInt(args[0]);
 		var the_author = if (id == null) Author.manager.get(1) else Author.manager.get(id);
-		var the_books = the_author.get_books();
+		var the_books = the_author.getBooks();
 		var do_all = false;
+		if (args.length > 1 && args[1] == "all") do_all = true;
 
-		if (args.legth > 1 && args[1] == "all") do_all = true;
+		var options = {author:the_author
+					, books: the_books
+		};
 
-		var out = template.execute({author:the_author
-		  }, {textesc: textesc, urlesc: urlesc, getmime: getmime});
-
-		if (ext == "xml") neko.Web.setHeader("Content-type","application/xml");
-		Sys.print(out);
-
-		return id;
+		return runStuff("author", options);
 	}
 
-	public function book(args:Array<Dynamic>) {
-		if (args.length < 1) { do_404([]); return null; }
-
-		var template_source = haxe.Resource.getString("book_" + ext);
-		if (template_source == null) { do_404([]); return null; }
-		var template = new haxe.Template(template_source);
+	public function book(args:Array<String>):Bool {
+		if (args.length < 1) args.push("1");
 
 		var id = Std.parseInt(args[0]);
 		var the_book = if (id == null) Book.manager.get(1) else Book.manager.get(id);
-		var out = template.execute({book:the_book
-									,authors:the_book.getAuthors()
-									,comment:the_book.getComment()
-									,tags:the_book.getTags()
-									,formats:the_book.getFormats()
-									,files:the_book.getFiles()
-									,files_with_formats:the_book.getFilesWithFormats()
-									,identifiers:the_book.getIdentifiers()
-									,external_links:the_book.getExternalLinks()
-		  }, {textesc: textesc, urlesc: urlesc, getmime: getmime});
-		if (ext == "xml") neko.Web.setHeader("Content-type","application/xml");
-		Sys.print(out);
+		var options = {book:the_book
+					,authors:the_book.getAuthors()
+					,comment:the_book.getComment()
+					,tags:the_book.getTags()
+					,formats:the_book.getFormats()
+					,files:the_book.getFiles()
+					,files_with_formats:the_book.getFilesWithFormats()
+					,identifiers:the_book.getIdentifiers()
+					,external_links:the_book.getExternalLinks()
+		};
 
-		return id;
+		return runStuff("book", options);
 	}
 }
 
@@ -280,7 +279,6 @@ class Book extends sys.db.Object {
 @:table("authors")
 @:index(link,unique)
 class Author extends sys.db.Object {
-/*class Author extends LinkedDBObjects {*/
 	public var id: SId;
 	public var name: SText;
 	public var sort: SNull<SText>;
