@@ -1,4 +1,7 @@
 -main LibraryBrowser
 -neko index.n
 -lib mtwin
-#-resource HelloTemplate.mtt@my_template
+#lib ImageMagick
+-resource BookHtml.mtt@book_html
+-resource BookXml.mtt@book_xml
+-resource AuthorXml.mtt@author_xml

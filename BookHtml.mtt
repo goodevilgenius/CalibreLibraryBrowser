@@ -1,0 +1,31 @@
+<!DOCTYPE html><!-- -*-html-*- -->
+<html>
+<head>
+  <title>::book::</title>
+</head>
+<body>
+
+<main>
+
+<h1>::book::</h1>
+
+<div>::comment::</div>
+
+<p>Authors:</p>
+<ul class="authors">::foreach authors::
+<li><a href="/author/::id::.html">$$textesc(::name::)</a></li>
+::end::</ul>
+
+<p>Files:</p>
+<ul class="files">::foreach files_with_formats::
+  <li><a href="/$$urlesc(::file::)">Download ($$textesc(::type::))</a></li>
+::end::</ul>
+
+<p>Links:</p>
+<ul class="links">::foreach external_links::
+  <li><a href="::link::">$$textesc(::name::)</a></li>
+::end::</ul>
+
+</main>
+</body>
+</html>

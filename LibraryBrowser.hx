@@ -2,16 +2,49 @@ import sys.db.Types;
 import sys.db.Connection;
 import mtwin.web.Request;
 import neko.Web;
+import haxe.io.Path;
 
+/**
+   LibraryBrowser is the controller class, and the main entry point
+   It contains all the methods for displaying the library
+**/
 class LibraryBrowser {
 
 	var cnx:Connection;
 	var dbFile:String;
 	var req:mtwin.web.Request;
+	var uri:String;
+	var ext:String;
 
 	public static function main() {
 		var l = new LibraryBrowser();
+		l.run();
 		l.close();
+	}
+
+	public static function textesc(resolve:String->Dynamic, str:String) {
+		return StringTools.htmlEscape(str);
+	}
+
+	public static function urlesc(resolve:String->Dynamic, str:String) {
+		return StringTools.replace(StringTools.urlEncode(str), "%2F", "/");
+	}
+
+	public static function getmime(resolve:String->Dynamic, path:String) {
+		var newpath = neko.Web.getCwd() + "/" + path;
+		if (!sys.FileSystem.exists(newpath)) return "";
+		var ext = Path.extension(newpath);
+		switch ext {
+		  case "epub": return "application/epub+zip";
+		  case "prc":  return "application/x-mobipocket-ebook";
+		  case "azw3": return "application/x-mobipocket-ebook";
+		  case "mobi": return "application/x-mobipocket-ebook";
+		  case "htmlz":return "application/zip";
+		}
+
+		var io = new sys.io.Process("file", ["-bi", newpath]);
+		var out = io.stdout.readLine();
+		return out.split(';')[0];
 	}
 
 	public function new() {
@@ -19,23 +52,115 @@ class LibraryBrowser {
 
 		cnx = sys.db.Sqlite.open(dbFile);
 		sys.db.Manager.cnx = cnx;
-        sys.db.Manager.initialize();
+		sys.db.Manager.initialize();
 
-		req = new mtwin.web.Request();
-		trace(neko.Web.getURI());
+		uri = neko.Web.getURI();
+		ext = Path.extension(uri);
+		if (ext == "" || ext == "htm") ext = "html";
+		req = new mtwin.web.Request(Path.withoutExtension(uri));
+	}
 
-		//*
-		var b = Book.manager.get(2);
-		trace(b.toString());
-		//for (a in b.getIdentifiers()) trace(a);
-		trace(b.getIdentifiers());
-		//*/
+	public function run() {
+		var part;
+		var level = 0;
+		var comm = "";
+		var args = [];
+		do {
+			part = req.getPathInfoPart(level++);
+			if (level == 1 && part == "index.n") continue;
+			if (comm == "") comm = part;
+			else if (part != "") args.push(part);
+		  
+		} while (part != "");
 
+		if (["main", "new","run","close"].indexOf(comm) > -1) { do_404([]); return; }
+		var todo = Reflect.field(this, comm);
+		if (!Reflect.isFunction(todo)) { do_404([]); return; }
+		Reflect.callMethod(this, todo, [args]);
 	}
 
 	public function close() {
 		sys.db.Manager.cleanup();
 		cnx.close();
+	}
+
+	public function do_404(args:Array<Dynamic>) {
+		neko.Web.setReturnCode(404);
+		Sys.println("Not found");
+		return true;
+	}
+
+	public function test(args:Array<Dynamic>) {
+		for (c in args) trace(c);
+		/* // search for authors
+		var search = Author.manager.search($name.like("B%"),{orderBy: name, limit:20});
+		for (a in search) trace(a);
+		//*/
+	}
+
+	public function author(args:Array<Dynamic>) {
+		if (args.length < 1) { do_404([]); return null; }
+
+		var template_source = haxe.Resource.getString("author_" + ext);
+		if (template_source == null) { do_404([]); return null; }
+		var template = new haxe.Template(template_source);
+
+		var id = Std.parseInt(args[0]);
+		var the_author = if (id == null) Author.manager.get(1) else Author.manager.get(id);
+		var the_books = the_author.get_books();
+		var do_all = false;
+
+		if (args.legth > 1 && args[1] == "all") do_all = true;
+
+		var out = template.execute({author:the_author
+		  }, {textesc: textesc, urlesc: urlesc, getmime: getmime});
+
+		if (ext == "xml") neko.Web.setHeader("Content-type","application/xml");
+		Sys.print(out);
+
+		return id;
+	}
+
+	public function book(args:Array<Dynamic>) {
+		if (args.length < 1) { do_404([]); return null; }
+
+		var template_source = haxe.Resource.getString("book_" + ext);
+		if (template_source == null) { do_404([]); return null; }
+		var template = new haxe.Template(template_source);
+
+		var id = Std.parseInt(args[0]);
+		var the_book = if (id == null) Book.manager.get(1) else Book.manager.get(id);
+		var out = template.execute({book:the_book
+									,authors:the_book.getAuthors()
+									,comment:the_book.getComment()
+									,tags:the_book.getTags()
+									,formats:the_book.getFormats()
+									,files:the_book.getFiles()
+									,files_with_formats:the_book.getFilesWithFormats()
+									,identifiers:the_book.getIdentifiers()
+									,external_links:the_book.getExternalLinks()
+		  }, {textesc: textesc, urlesc: urlesc, getmime: getmime});
+		if (ext == "xml") neko.Web.setHeader("Content-type","application/xml");
+		Sys.print(out);
+
+		return id;
+	}
+}
+
+class Preferences {
+
+	private var file:String;
+	private var formats:Array<String>;
+
+	public function new( ?prefFile:String) {
+	  file = if (prefFile == null) "prefs.json" else prefFile;
+	  formats = [ "EPUB", "PDF", "AZW3" ];
+	}
+
+	public function sortFormats(a:Format, b:Format) {
+		if (formats.indexOf(a.format) > -1 && formats.indexOf(b.format) < 0) return -1;
+	    if (formats.indexOf(b.format) > -1 && formats.indexOf(a.format) < 0) return 1;
+		return formats.indexOf(a.format) - formats.indexOf(b.format);
 	}
 }
 
@@ -56,9 +181,9 @@ class Book extends sys.db.Object {
 	public var has_cover: SBool;
 	public var last_modified: STimeStamp;
 
-  override public function toString() {
-	return title + ' by ' + getAuthors().join(' & ');
-  }
+	override public function toString() {
+		return title + ' by ' + getAuthors().join(' & ');
+	}
 
 	public function getComment() :Comment {
 		var r;
@@ -105,12 +230,48 @@ class Book extends sys.db.Object {
 	public function getFormats() :Array<Format> {
 		var r = new Array<Format>();
 		for (t in Format.manager.search({book: id})) r.push(t);
+		r.sort((new Preferences()).sortFormats);
 		return r;
 	}
 
-	public function getIdentifiers() :Map<String,String> {
+	public function getFiles() :Array<String> {
+		var r = new Array<String>();
+		var author = getAuthors()[0];
+		for (t in getFormats()) r.push(author.name + "/" + title + " (" + id + ")/" + t.toString());
+		return r;
+	}
+
+	public function getFilesWithFormats() :Array<{type:String,file:String}> {
+		var r = [];
+		var author = getAuthors()[0];
+		for (t in getFormats()) r.push({type:t.format,file:author.name + "/" + title + " (" + id + ")/" + t.toString()});
+		return r;
+	}
+
+	public function getIdentifiers() :Array<Identifier> {
+		var r = new Array<Identifier>();
+		for (t in Identifier.manager.search({book: id})) r.push(t);
+		return r;
+	}
+
+	public function getIdentifierMap() :Map<String,String> {
 		var r = new Map<String,String>();
-		for (t in Identifier.manager.search({book: id})) r.set(t.type, t.val);
+		for (t in getIdentifiers()) r.set(t.type, t.val);
+		return r;
+	}
+
+	public function getExternalLinks() :Array<{name:String,link:String}> {
+		var r = [];
+		var map = getIdentifierMap();
+		for (t in map.keys()){
+			switch t {
+			  case "google": r.push({name:"Google",link:"http://books.google.com/books?id=" + map.get(t)});
+			  case "goodreads": r.push({name:"Goodreads",link:"https://www.goodreads.com/book/show/" + map.get(t)});
+			  case "amazon": r.push({name:"Amazon",link:"http://smile.amazon.com/dp/" + map.get(t)});
+			  case "fictiondb": r.push({name:"FictionDB",link:"http://www.fictiondb.com/author/" + map.get(t) + ".htm"});
+			  case "barnesnoble": r.push({name:"Barnes & Noble",link:"http://www.barnesandnoble.com/" + map.get(t)});
+			  }  
+		}
 		return r;
 	}
 
@@ -119,14 +280,15 @@ class Book extends sys.db.Object {
 @:table("authors")
 @:index(link,unique)
 class Author extends sys.db.Object {
+/*class Author extends LinkedDBObjects {*/
 	public var id: SId;
 	public var name: SText;
 	public var sort: SNull<SText>;
 	public var link: SText;
 
-  override public function toString() {
-	return name;
-  }
+	override public function toString() {
+		return name;
+	}
 	
 	public function getBooks() :Array<Book> {
 		var r = new Array<Book>();
@@ -149,6 +311,10 @@ class Comment extends sys.db.Object {
 	public var id: SId;
 	public var book: SInt;
 	public var text: SText;
+
+	override public function toString() {
+		return text;
+	}
 }
 
 @:table("tags")
@@ -252,19 +418,28 @@ class BookSeries extends sys.db.Object {
 @:table("data")
 @:index(book,format,unique)
 class Format extends sys.db.Object {
-  public var id: SId;
-  @:relation(book) public var Book: Book;
-  public var format: SText;
-  public var uncompressed_size: SInt;
-  public var name: SText;
+	public var id: SId;
+	@:relation(book) public var Book: Book;
+	public var format: SText;
+	public var uncompressed_size: SInt;
+	public var name: SText;
+
+	override public function toString() {
+		return name + "." + format.toLowerCase();
+	}
+	
 }
 
 @:table("identifiers")
 @:index(book,type,unique)
 class Identifier extends sys.db.Object {
-  public var id: SId;
-  @:relation(book) public var Book: Book;
-  public var type: SText;
-  public var val: SText;
+	public var id: SId;
+	@:relation(book) public var Book: Book;
+	public var type: SText;
+	public var val: SText;
+
+	override public function toString() {
+		return type.toLowerCase() + ":" + val;
+	}
 }
 

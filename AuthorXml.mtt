@@ -1,0 +1,10 @@
+<feed xmlns="http://www.w3.org/2005/Atom" xmlns:dcterms="http://purl.org/dc/terms" xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:opds="http://opds-spec.org/2010/catalog"><!-- -*-xml-*- -->
+  <title>::author::</title>
+  <id>calibre:author:::author.id::</id>
+  <updated>2014-08-12T11:11:38Z</updated>
+  <link href="/" type="application/atom+xml;profile=opds-catalog;kind=navigation" rel="start" title="Danjones' library" />
+  <link href="/author/::author.id::.xml" type="application/atom+xml;type=entry;profile=opds-catalog" rel="self" title="::author::" />
+
+
+
+</feed>
