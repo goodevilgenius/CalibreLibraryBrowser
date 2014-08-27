@@ -15,6 +15,7 @@ class LibraryBrowser {
 	var req:mtwin.web.Request;
 	var uri:String;
 	var ext:String;
+	var prefs:Preferences;
 
 	public static function main() {
 		var l = new LibraryBrowser();
@@ -58,6 +59,8 @@ class LibraryBrowser {
 		ext = Path.extension(uri);
 		if (ext == "" || ext == "htm") ext = "html";
 		req = new mtwin.web.Request(Path.withoutExtension(uri));
+
+		prefs = new Preferences();
 	}
 
 	public function run() {
@@ -110,17 +113,56 @@ class LibraryBrowser {
 		return true;
 	}
 
+	private static function getBookOptions(the_book:Book) {
+		return {book:the_book
+			,authors:the_book.getAuthors()
+			,comment:the_book.getComment()
+			,tags:the_book.getTags()
+			,formats:the_book.getFormats()
+			,files:the_book.getFiles()
+			,files_with_formats:the_book.getFilesWithFormats()
+			,identifiers:the_book.getIdentifiers()
+			,external_links:the_book.getExternalLinks()
+		};
+	}
+
+	public function index(args:Array<String>):Bool {
+		return true;
+	}
+
 	public function author(args:Array<String>):Bool {
 		if (args.length < 1) args.push("1");
 
 		var id = Std.parseInt(args[0]);
 		var the_author = if (id == null) Author.manager.get(1) else Author.manager.get(id);
-		var the_books = the_author.getBooks();
+		var the_books = new Array<Dynamic>(); the_books = the_author.getBooks();
+		var full_books = null;
 		var do_all = false;
+		var page = null;
+
 		if (args.length > 1 && args[1] == "all") do_all = true;
+		if (args.length > 2) {
+			if (args[args.length - 2] == "page") page = Std.parseInt(args[args.length - 1]);
+		}
+		if (page == null || page < 0) page = 0;
+
+		if (do_all) {
+			// We need to get all the information for each book
+			full_books = new Array<{book:Book, props:Dynamic}>();
+			var this_book_num = page * prefs.page_length;
+			while (this_book_num < the_books.length && this_book_num < (page+1) * prefs.page_length) {
+				full_books.push({
+					book: the_books[this_book_num]
+					, props: getBookOptions(the_books[this_book_num])
+					});
+				this_book_num++;
+			}
+		}
 
 		var options = {author:the_author
-					, books: the_books
+					, do_all: do_all
+					, books: if (do_all) full_books else the_books
+					, series: the_author.getSeries()
 		};
 
 		return runStuff("author", options);
@@ -131,16 +173,7 @@ class LibraryBrowser {
 
 		var id = Std.parseInt(args[0]);
 		var the_book = if (id == null) Book.manager.get(1) else Book.manager.get(id);
-		var options = {book:the_book
-					,authors:the_book.getAuthors()
-					,comment:the_book.getComment()
-					,tags:the_book.getTags()
-					,formats:the_book.getFormats()
-					,files:the_book.getFiles()
-					,files_with_formats:the_book.getFilesWithFormats()
-					,identifiers:the_book.getIdentifiers()
-					,external_links:the_book.getExternalLinks()
-		};
+		var options = getBookOptions(the_book);
 
 		return runStuff("book", options);
 	}
@@ -151,9 +184,12 @@ class Preferences {
 	private var file:String;
 	private var formats:Array<String>;
 
+	public var page_length(default, null):Int;
+
 	public function new( ?prefFile:String) {
 	  file = if (prefFile == null) "prefs.json" else prefFile;
 	  formats = [ "EPUB", "PDF", "AZW3" ];
+	  page_length = 20;
 	}
 
 	public function sortFormats(a:Format, b:Format) {
@@ -293,6 +329,15 @@ class Author extends sys.db.Object {
 		for (t in BookAuthor.manager.search({author: id})) r.push(t.Book);
 		return r;
 	}
+
+	public function getSeries() :Array<Series> {
+		var r = new Array<Series>();
+		for (b in getBooks()) {
+			var s = b.getSeries();
+			if (r.indexOf(s) == -1 && s != null) r.push(s);
+		}
+		return r;
+	}
 }
 
 @:table("books_authors_link")
@@ -403,6 +448,10 @@ class Series extends sys.db.Object {
 		for (t in BookSeries.manager.search({series: id})) r.push(t.Book);
 		return r;
 	}
+
+	override public function toString() {
+		return name;
+	}
 }
 
 @:table("books_series_link")
@@ -425,7 +474,6 @@ class Format extends sys.db.Object {
 	override public function toString() {
 		return name + "." + format.toLowerCase();
 	}
-	
 }
 
 @:table("identifiers")

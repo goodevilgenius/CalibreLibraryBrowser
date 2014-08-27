@@ -4,7 +4,28 @@
   <updated>2014-08-12T11:11:38Z</updated>
   <link href="/" type="application/atom+xml;profile=opds-catalog;kind=navigation" rel="start" title="Danjones' library" />
   <link href="/author/::author.id::.xml" type="application/atom+xml;type=entry;profile=opds-catalog" rel="self" title="::author::" />
-
+  ::if do_all::
+  ::foreach books::
+    <entry>
+	  <title>::book::</title>
+	</entry>
+  ::end::
+  ::else::
+  <entry>
+	<title>All books</title>
+	<id>calibre:author:::author.id:::allbooks</id>
+	<content type="text">All books by ::author::</content>
+	<link href="/author/::author.id::/all.xml" type="application/atom+xml;profile=opds-catalog;kind=navigation" />
+  </entry>
+  ::foreach series::
+    <entry>
+	  <title>Series: ::__current__::</title>
+	  <id>calibre:series:::id::</id>
+	  <content type="text">::__current__::</content>
+	  <link href="/series/::id::.xml" type="application/atom+xml;profile=opds-catalog;kind=navigation"/>
+	</entry>
+  ::end::
+  ::end::
 
 
 </feed>
