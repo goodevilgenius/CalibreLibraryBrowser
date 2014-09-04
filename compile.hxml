@@ -4,4 +4,6 @@
 #lib ImageMagick
 -resource BookHtml.mtt@book_html
 -resource BookXml.mtt@book_xml
+-resource ShortBookEntryXml.mtt@short_book_entry_xml
 -resource AuthorXml.mtt@author_xml
+-resource FeedXml.mtt@feed_xml

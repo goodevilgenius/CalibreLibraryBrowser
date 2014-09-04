@@ -101,19 +101,24 @@ class LibraryBrowser {
 		//*/
 	}
 
-	private function runStuff(method:String, options:Dynamic):Bool {
-		var template_source = haxe.Resource.getString(method + "_" + ext);
-		if (template_source == null) { do_404([]); return false; }
+	private function runStuff(type:String, options:Dynamic, ?ret: Bool):String {
+		var template_source = haxe.Resource.getString(type + "_" + ext);
+		if (template_source == null) { do_404([]); return "failed"; }
 		var template = new haxe.Template(template_source);
 
 		var out = template.execute(options, {textesc: textesc, urlesc: urlesc, getmime: getmime});
 
-		if (ext == "xml") neko.Web.setHeader("Content-type","application/xml");
-		Sys.print(out);
-		return true;
+		if (ret) return out;
+		else {
+			switch ext {
+				case "xml": neko.Web.setHeader("Content-type","application/xml");
+			}
+			Sys.print(out);
+			return "";
+		}
 	}
 
-	private static function getBookOptions(the_book:Book) {
+	private function getBookOptions(the_book:Book) {
 		return {book:the_book
 			,authors:the_book.getAuthors()
 			,comment:the_book.getComment()
@@ -123,7 +128,12 @@ class LibraryBrowser {
 			,files_with_formats:the_book.getFilesWithFormats()
 			,identifiers:the_book.getIdentifiers()
 			,external_links:the_book.getExternalLinks()
+			,self: this
 		};
+	}
+
+	private function getBookEntry(the_book:Book) {
+
 	}
 
 	public function index(args:Array<String>):Bool {
@@ -133,12 +143,13 @@ class LibraryBrowser {
 	public function author(args:Array<String>):Bool {
 		if (args.length < 1) args.push("1");
 
-		var id = Std.parseInt(args[0]);
-		var the_author = if (id == null) Author.manager.get(1) else Author.manager.get(id);
-		var the_books = new Array<Dynamic>(); the_books = the_author.getBooks();
-		var full_books = null;
-		var do_all = false;
-		var page = null;
+		var id:Int = Std.parseInt(args[0]);
+		var the_author:Author = if (id == null) Author.manager.get(1) else Author.manager.get(id);
+		var the_books: Array<Book> = the_author.getBooks();
+		//var full_books:Array<{book:Book, props:Dynamic}> = null;
+		var do_all:Bool = false;
+		var page:Int = null;
+		var entries:Array<String> = [];
 
 		if (args.length > 1 && args[1] == "all") do_all = true;
 		if (args.length > 2) {
@@ -148,24 +159,43 @@ class LibraryBrowser {
 
 		if (do_all) {
 			// We need to get all the information for each book
-			full_books = new Array<{book:Book, props:Dynamic}>();
+			//full_books = new Array<{book:Book, props:Dynamic}>();
 			var this_book_num = page * prefs.page_length;
 			while (this_book_num < the_books.length && this_book_num < (page+1) * prefs.page_length) {
-				full_books.push({
-					book: the_books[this_book_num]
-					, props: getBookOptions(the_books[this_book_num])
-					});
+				var the_book:Book = the_books[this_book_num];
+				var opts = {
+						book: the_book
+						, props: getBookOptions(the_books[this_book_num])
+				};
+				$type(opts);
+				entries.push(runStuff("short_book_entry", opts, true));
+				/*
+				trace(the_book);
+				trace(the_book.name);
+				trace(the_book.title);
+				//*/
 				this_book_num++;
 			}
 		}
 
+		/*
 		var options = {author:the_author
 					, do_all: do_all
 					, books: if (do_all) full_books else the_books
 					, series: the_author.getSeries()
-		};
+					, self: this
+					};
+		*/
+		var options = {title:the_author.name
+					   , id: "calibre:author:" + the_author.id
+					   , updated: "2014-08-12T11:11:38Z" // !!!!!
+					   , breadcrumb: [] // !!!!
+					   , entries: entries
+					, self: this
+					};
 
-		return runStuff("author", options);
+
+		return runStuff("feed", options) == "";
 	}
 
 	public function book(args:Array<String>):Bool {
@@ -175,7 +205,7 @@ class LibraryBrowser {
 		var the_book = if (id == null) Book.manager.get(1) else Book.manager.get(id);
 		var options = getBookOptions(the_book);
 
-		return runStuff("book", options);
+		return runStuff("book", options) == "";
 	}
 }
 
@@ -185,11 +215,15 @@ class Preferences {
 	private var formats:Array<String>;
 
 	public var page_length(default, null):Int;
+	public var url_base(default, null):String;
+	public var catalog_name(default, null):String;
 
 	public function new( ?prefFile:String) {
-	  file = if (prefFile == null) "prefs.json" else prefFile;
-	  formats = [ "EPUB", "PDF", "AZW3" ];
-	  page_length = 20;
+		file = if (prefFile == null) "prefs.json" else prefFile;
+		formats = [ "EPUB", "PDF", "AZW3" ];
+		page_length = 20;
+		url_base = "";
+		catalog_name = "Danjones' Library";
 	}
 
 	public function sortFormats(a:Format, b:Format) {
@@ -216,8 +250,14 @@ class Book extends sys.db.Object {
 	public var has_cover: SBool;
 	public var last_modified: STimeStamp;
 
-	override public function toString() {
+	@:skip public var name(get,never):String;
+
+	public function get_name():String { 
 		return title + ' by ' + getAuthors().join(' & ');
+	}
+
+	override public function toString() {
+		return name;
 	}
 
 	public function getComment() :Comment {

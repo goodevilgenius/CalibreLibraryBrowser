@@ -13,12 +13,12 @@
 
 <p>Authors:</p>
 <ul class="authors">::foreach authors::
-<li><a href="/author/::id::.html">$$textesc(::name::)</a></li>
+<li><a href="::self.prefs.url_base::/author/::id::.html">$$textesc(::name::)</a></li>
 ::end::</ul>
 
 <p>Files:</p>
 <ul class="files">::foreach files_with_formats::
-  <li><a href="/$$urlesc(::file::)">Download ($$textesc(::type::))</a></li>
+  <li><a href="::self.prefs.url_base::/$$urlesc(::file::)">Download ($$textesc(::type::))</a></li>
 ::end::</ul>
 
 <p>Links:</p>

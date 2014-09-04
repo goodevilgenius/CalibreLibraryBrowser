@@ -2,27 +2,27 @@
   <title>::author::</title>
   <id>calibre:author:::author.id::</id>
   <updated>2014-08-12T11:11:38Z</updated>
-  <link href="/" type="application/atom+xml;profile=opds-catalog;kind=navigation" rel="start" title="Danjones' library" />
-  <link href="/author/::author.id::.xml" type="application/atom+xml;type=entry;profile=opds-catalog" rel="self" title="::author::" />
+  <link href="::self.prefs.url_base::/" type="application/atom+xml;profile=opds-catalog;kind=navigation" rel="start" title="::self.prefs.catalog_name::" />
+  <link href="::self.prefs.url_base::/author/::author.id::.xml" type="application/atom+xml;type=entry;profile=opds-catalog" rel="self" title="::author::" />
   ::if do_all::
   ::foreach books::
     <entry>
-	  <title>::book::</title>
+	  <title>$$textesc(::book.name::)</title>
 	</entry>
   ::end::
   ::else::
   <entry>
 	<title>All books</title>
-	<id>calibre:author:::author.id:::allbooks</id>
-	<content type="text">All books by ::author::</content>
-	<link href="/author/::author.id::/all.xml" type="application/atom+xml;profile=opds-catalog;kind=navigation" />
+	<id>calibre:author:::author.id:::all</id>
+	<content type="text">All books by $$textesc(::author.name::)</content>
+	<link href="::self.prefs.url_base::/author/::author.id::/all.xml" type="application/atom+xml;profile=opds-catalog;kind=navigation" />
   </entry>
   ::foreach series::
     <entry>
-	  <title>Series: ::__current__::</title>
+	  <title>Series: $$textesc(::name::)</title>
 	  <id>calibre:series:::id::</id>
-	  <content type="text">::__current__::</content>
-	  <link href="/series/::id::.xml" type="application/atom+xml;profile=opds-catalog;kind=navigation"/>
+	  <content type="text">$$textesc(::name::)</content>
+	  <link href="::self.prefs.url_base::/series/::id::.xml" type="application/atom+xml;profile=opds-catalog;kind=navigation"/>
 	</entry>
   ::end::
   ::end::

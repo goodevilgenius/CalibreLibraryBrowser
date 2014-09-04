@@ -1,0 +1,13 @@
+<feed xmlns="http://www.w3.org/2005/Atom" xmlns:dcterms="http://purl.org/dc/terms" xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:opds="http://opds-spec.org/2010/catalog"><!-- -*-xml-*- -->
+  <title>::title::</title>
+  <id>::id::</id>
+  <updated>::updated::</updated>
+  <link href="::self.prefs.url_base::/" type="application/atom+xml;profile=opds-catalog;kind=navigation" rel="start" title="::self.prefs.catalog_name::" />
+  ::foreach breadcrumb::
+  <link href="::self.prefs.url_base::::url::" type="application/atom+xml;type=entry;profile=opds-catalog" rel="breadcrumb" title="::name::" />
+  ::end::
+  <link href="::self.prefs.url_base::::self.uri::" type="application/atom+xml;type=entry;profile=opds-catalog" rel="self" title="::title::" />
+  ::foreach entries::
+  ::__current__::
+  ::end::
+</feed>

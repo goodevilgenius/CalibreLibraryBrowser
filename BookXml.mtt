@@ -3,8 +3,8 @@
   <title>::book.title::</title>
   <id>calibre:book:::book.id::</id>
   <updated>2014-08-12T11:11:38Z</updated>
-  <link href="/" type="application/atom+xml;profile=opds-catalog;kind=navigation" rel="start" title="Danjones' library" />
-  <link href="/book/::book.id::.xml" type="application/atom+xml;type=entry;profile=opds-catalog" rel="self" title="::book.title::" />
+  <link href="::self.prefs.url_base::/" type="application/atom+xml;profile=opds-catalog;kind=navigation" rel="start" title="Danjones' library" />
+  <link href="::self.prefs.url_base::/book/::book.id::.xml" type="application/atom+xml;type=entry;profile=opds-catalog" rel="self" title="::book.title::" />
   ::foreach authors::
   <author>
     <name>::name::</name>
@@ -21,17 +21,17 @@
 	::comment::
   </content>
   ::foreach files_with_formats::
-  <link href="/$$urlesc(::file::)" type="$$getmime(::file::)" rel="http://opds-spec.org/acquisition" title="Download this ebook as ::type::" />
+  <link href="::self.prefs.url_base::/$$urlesc(::file::)" type="$$getmime(::file::)" rel="http://opds-spec.org/acquisition" title="Download this ebook as ::type::" />
   ::end::
   <!--
   <link href="../../Isaac%20Asimov/The%20Naked%20Sun%20%283205%29/The%20Naked%20Sun%20-%20Isaac%20Asimov_resizedcover.jpg" type="image/jpeg" rel="http://opds-spec.org/image" />
   <link href="../../Isaac%20Asimov/The%20Naked%20Sun%20%283205%29/The%20Naked%20Sun%20-%20Isaac%20Asimov.jpg" type="image/jpeg" rel="http://opds-spec.org/image/thumbnail" />
   -->
   ::foreach authors::
-  <link href="/author/::id::.xml" type="application/atom+xml;profile=opds-catalog;kind=navigation" rel="related" title="Books by $$textesc(::name::)" />
+  <link href="::self.prefs.url_base::/author/::id::.xml" type="application/atom+xml;profile=opds-catalog;kind=navigation" rel="related" title="Books by $$textesc(::name::)" />
   ::end::
   ::foreach tags::
-  <link href="/tag/::id::.xml" type="application/atom+xml;profile=opds-catalog;kind=navigation" rel="related" title="Books in $$textesc(::name::)" />
+  <link href="::self.prefs.url_base::/tag/::id::.xml" type="application/atom+xml;profile=opds-catalog;kind=navigation" rel="related" title="Books in $$textesc(::name::)" />
   ::end::
   ::foreach external_links::
   <link href="::link::" type="text/html" rel="related" title="This book on $$textesc(::name::)" />
