@@ -1,3 +1,13 @@
 <entry><!-- -*-xml-*- -->
-  <title>::book.name::</title>
+  <title>$$textesc(::title::)</title>
+  <id>::id::</id>
+  <published>::book.pubdate::</published>
+  ::foreach props.tags::
+  <category term="$$textesc(::name::)" />
+  ::end::
+  ::foreach props.files_with_formats::
+  <link type="$$getmime(::file::)" href="::props.self.prefs.url_base::/$$urlesc(::file::)" rel="http://opds-spec.org/acquisition" title="Download this ebook as ::type::" />
+  ::end::
+  <!-- need images -->
+  <link href="/book/::book.id::.xml" type="application/atom+xml;type=entry;profile=opds-catalog" rel="alternate" />
 </entry>

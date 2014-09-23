@@ -151,11 +151,23 @@ class LibraryBrowser {
 		var page:Int = null;
 		var entries:Array<String> = [];
 
+		// select timestamp from books where id in (select book from books_authors_link where author=137) order by timestamp desc limit 1;
+		var tsRes = cnx.request('SELECT timestamp FROM books WHERE id IN (SELECT book FROM books_authors_link WHERE author=' + id + ') ORDER BY timestamp DESC LIMIT 1');
+		var ts:STimeStamp = if (tsRes.length > 0) tsRes.next().timestamp else null;
+		// Maybe an STimeStamp
+		//$type(ts);
+		//Sys.println(ts);
+		// RFC3339: var d = DateTools.format(ts,%Y-%m-%dT%H:%M:%S%z); d = d.substr(0,d.length-2) + ":" + d.substr(-2);
+
 		if (args.length > 1 && args[1] == "all") do_all = true;
 		if (args.length > 2) {
 			if (args[args.length - 2] == "page") page = Std.parseInt(args[args.length - 1]);
 		}
 		if (page == null || page < 0) page = 0;
+		var next_page = page + 1;
+		var last_page = page - 1;
+		var next_page_link:String = null;
+		var last_page_link:String = null;
 
 		if (do_all) {
 			// We need to get all the information for each book
@@ -165,9 +177,12 @@ class LibraryBrowser {
 				var the_book:Book = the_books[this_book_num];
 				var opts = {
 						book: the_book
+						, title: the_book.name
+						, id: "calibre:book:" + the_book.id
+						, published: the_book.pubdate
+						, links: []
 						, props: getBookOptions(the_books[this_book_num])
 				};
-				$type(opts);
 				entries.push(runStuff("short_book_entry", opts, true));
 				/*
 				trace(the_book);
@@ -176,6 +191,9 @@ class LibraryBrowser {
 				//*/
 				this_book_num++;
 			}
+			var next_page_num = next_page * prefs.page_length;
+			if (next_page_num < the_books.length) next_page_link = "/author/" + id + "/all/page/" + next_page + ".xml";
+			if (last_page >= 0) last_page_link = "/author/" + id + "/all/page/" + last_page + ".xml";
 		}
 
 		/*
@@ -188,8 +206,10 @@ class LibraryBrowser {
 		*/
 		var options = {title:the_author.name
 					   , id: "calibre:author:" + the_author.id
-					   , updated: "2014-08-12T11:11:38Z" // !!!!!
+					   , updated: ts
 					   , breadcrumb: [] // !!!!
+					   , next_page: next_page_link
+					   , last_page: last_page_link
 					   , entries: entries
 					, self: this
 					};
