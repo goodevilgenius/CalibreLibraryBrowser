@@ -1,5 +1,15 @@
 # Calibre Library Browser
 
+Development on this application has ceased. I mostly started this as an exercise
+to learn Haxe, but I've found the language more difficult to work with than I'd
+like, and I don't really have the time to pursue this project further.
+
+At some point in time, I'd like to revisit the idea for this project, but I
+probably will choose a different language. I will certainly leave this here if
+someone else finds it of interest.
+
+---
+
 This is a work-in-progress, and is barely functional at all, currently.
 
 This is a RESTful web app that serves as a front-end to your Calibre Library. It
